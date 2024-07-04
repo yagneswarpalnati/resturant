@@ -3,9 +3,11 @@ const app = express();
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const mongoose=require('mongoose');
-const session=require('express-session');
 const bcrypt=require('bcryptjs');
 const cors=require("cors");
+const passport=require('passport');
+const LocalStrategy=require('passport-local').Strategy;
+const session=require('express-session');
 const mongodbSession=require('connect-mongodb-session')(session);
 require('dotenv').config()
 
@@ -54,44 +56,91 @@ app.use(
   })
 )
 
-
-app.post('/login', (req,res)=>{
-  const {email,password}=req.body;
-  customerModel.findOne({email:email})
-  .then(user=>{
-    if(user){
-      if(bcrypt.compareSync(password,user.password)){
-        req.session.user={id:user._id,email:user.email};
-        res.json({data:'Success','userEmail':email});
-      }else{
-        res.json(`Wrong password`);
-      }
-    }else{
-      res.json('User not found.');
+passport.use(new LocalStrategy({
+  usernameField:'email',
+  passwordField:'password'
+},async (email,password,done)=>{
+  try{
+    const user=await customerModel.findOne({email});
+    if(!user){
+      return done(null,false,{message:'no user found'})
     }
-  }).catch(err=>res.json(err))
-})
-
-app.post('/register',async (req,res)=>{
-  const {name,email,password}=req.body;
-  const hashPwd= await bcrypt.hash(password,12);
-  await customerModel.findOne({email:email})
-  .then(user=>{
-    if(user){
-      console.log("User exists");
-      res.json('User email already exists');
-    }else{
-      customerModel.create({
-        name,
-        email,
-        password:hashPwd
-      })
-      .then(customer=>res.json(customer))
-      .catch(err=>res.json(err));
+    const isValid=await bcrypt.compare(password,user.password);
+    if(!isValid){
+      return done(null,false,{message:'invalid password'})
     }
+    return done(null,user);
+    }catch(err){
+      return done(err);
+  }
+}));
+
+passport.serializeUser((user,done)=>{
+  done(null,user.id);
+});
+
+passport.deserializeUser((id,done)=>{
+  customerModel.findById(id,(err,user)=>{
+    done(err,user);
+    });
+});
+
+app.post('/login', passport.authenticate('local', {
+  failureRedirect: '/login',
+  failureFlash: true
+}), (req, res) => {
+  res.json({ message: 'Logged in successfully' });
+});
+// app.post('/login', (req,res)=>{
+//   const {email,password}=req.body;
+//   customerModel.findOne({email:email})
+//   .then(user=>{
+//     if(user){
+//       if(bcrypt.compareSync(password,user.password)){
+//         res.json({data:'Success','userEmail':email});
+//       }else{
+//         res.json(`Wrong password`);
+//       }
+//     }else{
+//       res.json('User not found.');
+//     }
+//   }).catch(err=>res.json(err))
+// })
+app.post('/register', async (req, res) => {
+  const { name, email, password } = req.body;
+  const hashPwd = await bcrypt.hash(password, 12);
+  const user = new customerModel({
+    name,
+    email,
+    password: hashPwd
   });
+  try {
+    await user.save();
+    res.json({ message: 'User created successfully' });
+  } catch (err) {
+    res.json({ message: 'Error creating user' });
+  }
+});
+// app.post('/register',async (req,res)=>{
+//   const {name,email,password}=req.body;
+//   const hashPwd= await bcrypt.hash(password,12);
+//   await customerModel.findOne({email:email})
+//   .then(user=>{
+//     if(user){
+//       console.log("User exists");
+//       res.json('User email already exists');
+//     }else{
+//       customerModel.create({
+//         name,
+//         email,
+//         password:hashPwd
+//       })
+//       .then(customer=>res.json(customer))
+//       .catch(err=>res.json(err));
+//     }
+//   });
   
-})
+// })
 
   app.get('/meals',(req, res) => {
     fs.readFile('./data/available-meals.json', 'utf8', (err, data) => {
@@ -158,10 +207,7 @@ app.get('/customerOrder/:email',(req,res)=>{
 })
 
 
-app.get('/dashboard',(req,res)=>{
-  res.send(req.session)
-  
-})
+
 
 
 
@@ -172,5 +218,9 @@ app.use((req, res) => {
     res.status(404).json({ message: 'Not found' });
   }
 });
+
+app.get('/',(req,res)=>{
+  res.send('hello')
+})
 
 app.listen(PORT);

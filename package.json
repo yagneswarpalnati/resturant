@@ -21,6 +21,8 @@
     "mongodb": "^6.5.0",
     "mongodb-memory-server": "^9.2.0",
     "mongoose": "^8.3.0",
-    "nodemon": "^3.1.0"
+    "nodemon": "^3.1.0",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0"
   }
 }
