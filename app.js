@@ -91,21 +91,7 @@ app.post('/login', passport.authenticate('local', {
 }), (req, res) => {
   res.json({ message: 'Logged in successfully' });
 });
-// app.post('/login', (req,res)=>{
-//   const {email,password}=req.body;
-//   customerModel.findOne({email:email})
-//   .then(user=>{
-//     if(user){
-//       if(bcrypt.compareSync(password,user.password)){
-//         res.json({data:'Success','userEmail':email});
-//       }else{
-//         res.json(`Wrong password`);
-//       }
-//     }else{
-//       res.json('User not found.');
-//     }
-//   }).catch(err=>res.json(err))
-// })
+
 app.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
   const hashPwd = await bcrypt.hash(password, 12);
@@ -121,26 +107,6 @@ app.post('/register', async (req, res) => {
     res.json({ message: 'Error creating user' });
   }
 });
-// app.post('/register',async (req,res)=>{
-//   const {name,email,password}=req.body;
-//   const hashPwd= await bcrypt.hash(password,12);
-//   await customerModel.findOne({email:email})
-//   .then(user=>{
-//     if(user){
-//       console.log("User exists");
-//       res.json('User email already exists');
-//     }else{
-//       customerModel.create({
-//         name,
-//         email,
-//         password:hashPwd
-//       })
-//       .then(customer=>res.json(customer))
-//       .catch(err=>res.json(err));
-//     }
-//   });
-  
-// })
 
   app.get('/meals',(req, res) => {
     fs.readFile('./data/available-meals.json', 'utf8', (err, data) => {
